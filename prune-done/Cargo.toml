@@ -1,0 +1,12 @@
+[package]
+name = "prune-done"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+walkdir = "2.5.0"
+tree-sitter-org = { git = "https://github.com/nvim-orgmode/tree-sitter-org.git" }
+tree-sitter = "0.20"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+tracing-log = "0.2.0"
