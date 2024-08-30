@@ -1,10 +1,55 @@
-use std::{fs, io};
+use std::{
+    fs,
+    io::{self, Read, Write},
+};
 
-use tracing::{info, Level};
+use clap::Parser;
+use tracing::{debug, info, Level};
 use tracing_subscriber::FmtSubscriber;
 use tree_sitter::TreeCursor;
 use tree_sitter_org;
 
+fn parse_keyword(s: &str) -> Result<String, String> {
+    Ok(s.trim().to_uppercase())
+}
+
+#[derive(Parser, Debug)]
+struct Cli {
+    #[clap(value_parser)]
+    input_file: Option<String>,
+
+    #[clap(long)]
+    output_file: Option<String>,
+
+    #[clap(long, value_delimiter = ',', value_parser = parse_keyword, default_value = "TODO,DOING,BLOCKED")]
+    keywords_unfinished: Vec<String>,
+
+    #[clap(long, value_delimiter = ',', value_parser = parse_keyword, default_value = "DONE,ABANDONED")]
+    keywords_finished: Vec<String>,
+}
+
+impl Cli {
+    fn config(&self) -> Config {
+        Config {
+            keywords_unfinished: self.keywords_unfinished.clone(),
+            keywords_finished: self.keywords_finished.clone(),
+        }
+    }
+
+    fn write_output(&self, output: &str) -> io::Result<()> {
+        if self.input_file.is_none() && self.output_file.is_none() {
+            io::stdout().write_all(output.as_bytes())
+        } else {
+            let output_file = self
+                .output_file
+                .as_ref()
+                .unwrap_or(&self.input_file.as_ref().unwrap());
+            fs::write(output_file, output)
+        }
+    }
+}
+
+#[derive(Debug)]
 struct Config {
     keywords_unfinished: Vec<String>,
     keywords_finished: Vec<String>,
@@ -13,33 +58,38 @@ struct Config {
 fn main() {
     // set up tracing
     let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
+        .with_max_level(Level::DEBUG)
         .with_writer(io::stderr)
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
-    let config = Config {
-        keywords_unfinished: vec![
-            "TODO".to_string(),
-            "DOING".to_string(),
-            "BLOCKED".to_string(),
-        ],
-        keywords_finished: vec!["DONE".to_string(), "ABANDONED".to_string()],
-    };
+    let cli = Cli::parse();
+    debug!("{:?}", cli);
+    let config = cli.config();
 
-    // set up tree-sitter parser
+    let content = if let Some(input_file) = cli.input_file.clone() {
+        fs::read_to_string(&input_file).expect("Error reading file")
+    } else {
+        let mut content = String::new();
+        io::stdin()
+            .read_to_string(&mut content)
+            .expect("Error reading from stdin");
+        content
+    };
+    let output = modify_content(&config, &content);
+    cli.write_output(&output).expect("Error writing output");
+}
+
+fn modify_content(config: &Config, content: &str) -> String {
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(tree_sitter_org::language())
         .expect("Error loading Org language");
-    let content = fs::read_to_string("./Current.org").expect("Error reading file");
     let tree = parser.parse(&content, None).unwrap();
-    // print_tree(tree.root_node(), &content, 0);
-    // println!("{}", tree.root_node().to_sexp());
-    // return;
-    let mut edited = false;
+
     let mut output = String::new();
     let mut start_byte = 0;
+    let mut edited = false;
 
     let mut cursor = tree.walk();
     traverse_and_modify(
@@ -52,7 +102,7 @@ fn main() {
     );
 
     output.push_str(&content[start_byte..]);
-    print!("{}", output);
+    output
 }
 
 fn traverse_and_modify(
