@@ -1,12 +1,25 @@
-use crate::cli::Config;
 use tracing::info;
 use tree_sitter::{Node, TreeCursor};
 
+use crate::cli::Config;
+use crate::utils::fs::{read_input, write_output};
+use crate::utils::{get_headline_text, get_parser, get_stars};
+use std::io;
+
+pub fn prune_done(
+    config: &Config,
+    input_file: Option<&str>,
+    output_file: Option<&str>,
+) -> io::Result<()> {
+    let input = read_input(input_file)?;
+    let output = modify_content(&config, &input);
+    write_output(input_file, output_file, &output)?;
+
+    Ok(())
+}
+
 pub fn modify_content(config: &Config, content: &str) -> String {
-    let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(tree_sitter_org::language())
-        .expect("Error loading Org language");
+    let mut parser = get_parser();
     let tree = parser.parse(&content, None).unwrap();
 
     let mut output = String::new();
@@ -21,6 +34,7 @@ pub fn modify_content(config: &Config, content: &str) -> String {
         &mut output,
         &mut start_byte,
         &mut edited,
+        0,
     );
 
     output.push_str(&content[start_byte..]);
@@ -34,13 +48,22 @@ fn traverse_and_modify(
     output: &mut String,
     start_byte: &mut usize,
     edited: &mut bool,
+    depth: usize,
 ) {
     loop {
         let node = cursor.node();
 
-        if !prune_done(config, cursor, node, content, output, start_byte, edited) {
+        if !inner_prune_done(config, cursor, node, content, output, start_byte, edited) {
             if cursor.goto_first_child() {
-                traverse_and_modify(config, cursor, content, output, start_byte, edited);
+                traverse_and_modify(
+                    config,
+                    cursor,
+                    content,
+                    output,
+                    start_byte,
+                    edited,
+                    depth + 1,
+                );
                 cursor.goto_parent();
             }
 
@@ -51,7 +74,7 @@ fn traverse_and_modify(
     }
 }
 
-fn prune_done(
+fn inner_prune_done(
     config: &Config,
     cursor: &mut TreeCursor,
     node: Node,
@@ -76,7 +99,7 @@ fn prune_done(
                     if !cursor.goto_next_sibling() {
                         info!("no next sibling: {}", node.child_count());
                         *start_byte = subnode.end_byte();
-                        return true;
+                        return false;
                     }
                     subnode = cursor.node();
                     if subnode.kind() == "headline"
@@ -98,36 +121,36 @@ fn prune_done(
     false
 }
 
-fn get_stars(node: Node, content: &str) -> String {
-    node.child_by_field_name("stars")
-        .expect("Error getting stars")
-        .utf8_text(content.as_bytes())
-        .expect("Error getting stars text")
-        .to_owned()
-}
+#[cfg(test)]
+mod tests {
 
-fn get_headline_text(node: Node, content: &str) -> Option<String> {
-    if let Some(item) = node.child_by_field_name("item") {
-        Some(item.utf8_text(content.as_bytes()).ok()?.to_owned())
-    } else {
-        None
-    }
-}
+    use super::*;
 
-pub fn print_tree(node: Node, source_code: &str, indent: usize) {
-    if node.kind() == "headline" {
-        println!(
-            "{:indent$}{} [{}]",
-            "",
-            node.kind(),
-            node.utf8_text(source_code.as_bytes()).unwrap_or("").trim(),
-            indent = indent
-        );
-    } else {
-        println!("{:indent$}{}", "", node.kind(), indent = indent);
+    #[test]
+    fn test_modify_content() {
+        let config = Config {
+            keywords_finished: vec!["DONE".to_string(), "CANCELLED".to_string()],
+            ..Default::default()
+        };
+
+        let input = "* TODO Task 1\n** DONE Subtask 1\n** Subtask 2\n* CANCELLED Task 2\n* Task 3";
+        let expected_output = "* TODO Task 1\n** Subtask 2\n* Task 3";
+
+        let result = modify_content(&config, input);
+        assert_eq!(result, expected_output);
     }
 
-    for child in node.children(&mut node.walk()) {
-        print_tree(child, source_code, indent + 2);
+    #[test]
+    fn test_remove_subtasks() {
+        let config = Config {
+            keywords_finished: vec!["DONE".to_string(), "CANCELLED".to_string()],
+            ..Default::default()
+        };
+
+        let input = "* TODO Task 1\n** DONE Subtask 1\n*** Subtask 2\n* CANCELLED Task 2\n* Task 3";
+        let expected_output = "* TODO Task 1\n* Task 3";
+
+        let result = modify_content(&config, input);
+        assert_eq!(result, expected_output);
     }
 }
