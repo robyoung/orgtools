@@ -1,6 +1,5 @@
 use std::io;
 
-use tracing::info;
 use tree_sitter::{Query, QueryCursor};
 
 use crate::{

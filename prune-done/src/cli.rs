@@ -1,18 +1,65 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Arg, ArgMatches, Command};
 
-pub fn parse_keyword(s: &str) -> Result<String, String> {
+fn parse_keyword(s: &str) -> Result<String, String> {
     Ok(s.trim().to_uppercase())
 }
 
-#[derive(Parser, Debug)]
+pub fn cli() -> Cli {
+    let matches = create_command().get_matches();
+    Cli::from_matches(&matches)
+}
+
+fn create_command() -> Command {
+    let input_file = Arg::new("input_file")
+        .help("Input file path")
+        .required(false)
+        .index(1);
+    Command::new("orgtools")
+        .about("A tool for managing org files")
+        .subcommand_required(true)
+        .arg(
+            Arg::new("keywords_unfinished")
+                .long("keywords-unfinished")
+                .value_parser(parse_keyword)
+                .value_delimiter(',')
+                .default_value("TODO,DOING,BLOCKED")
+                .help("Keywords for unfinished tasks"),
+        )
+        .arg(
+            Arg::new("keywords_finished")
+                .long("keywords-finished")
+                .value_parser(parse_keyword)
+                .value_delimiter(',')
+                .default_value("DONE,ABANDONED")
+                .help("Keywords for finished tasks"),
+        )
+        .subcommand(
+            Command::new("prune")
+                .about("Remove finished tasks")
+                .arg(input_file.clone())
+                .arg(
+                    Arg::new("output_file")
+                        .long("output-file")
+                        .help("Output file path")
+                        .required(false),
+                ),
+        )
+        .subcommand(
+            Command::new("tree")
+                .about("Display tree structure")
+                .arg(input_file.clone()),
+        )
+        .subcommand(
+            Command::new("list")
+                .about("List tasks")
+                .arg(input_file.clone()),
+        )
+}
+
+#[derive(Debug)]
 pub struct Cli {
-    #[clap(long, value_delimiter = ',', value_parser = parse_keyword, default_value = "TODO,DOING,BLOCKED")]
     pub keywords_unfinished: Vec<String>,
-
-    #[clap(long, value_delimiter = ',', value_parser = parse_keyword, default_value = "DONE,ABANDONED")]
     pub keywords_finished: Vec<String>,
-
-    #[command(subcommand)]
     pub command: Commands,
 }
 
@@ -23,36 +70,53 @@ impl Cli {
             keywords_finished: self.keywords_finished.clone(),
         }
     }
+
+    fn from_matches(matches: &ArgMatches) -> Self {
+        let keywords_unfinished = matches
+            .get_many::<String>("keywords_unfinished")
+            .unwrap()
+            .cloned()
+            .collect();
+        let keywords_finished = matches
+            .get_many::<String>("keywords_finished")
+            .unwrap()
+            .cloned()
+            .collect();
+
+        let command = match matches.subcommand() {
+            Some(("prune", sub_matches)) => Commands::Prune {
+                input_file: sub_matches.get_one::<String>("input_file").cloned(),
+                output_file: sub_matches.get_one::<String>("output_file").cloned(),
+            },
+            Some(("tree", sub_matches)) => Commands::Tree {
+                input_file: sub_matches.get_one::<String>("input_file").cloned(),
+            },
+            Some(("list", sub_matches)) => Commands::List {
+                input_file: sub_matches.get_one::<String>("input_file").cloned(),
+            },
+            _ => unreachable!(),
+        };
+
+        Cli {
+            keywords_unfinished,
+            keywords_finished,
+            command,
+        }
+    }
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Debug)]
 pub enum Commands {
     Prune {
-        #[command(flatten)]
-        input_file: InputFile,
-
-        #[command(flatten)]
-        output_file: OutputFile,
+        input_file: Option<String>,
+        output_file: Option<String>,
     },
     Tree {
-        #[command(flatten)]
-        input_file: InputFile,
+        input_file: Option<String>,
     },
     List {
-        #[command(flatten)]
-        input_file: InputFile,
+        input_file: Option<String>,
     },
-}
-
-#[derive(Args, Debug)]
-pub struct InputFile {
-    pub input_file: Option<String>,
-}
-
-#[derive(Args, Debug)]
-pub struct OutputFile {
-    #[arg(long)]
-    pub output_file: Option<String>,
 }
 
 #[derive(Debug, Default)]
