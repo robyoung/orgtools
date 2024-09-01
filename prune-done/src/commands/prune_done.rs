@@ -3,7 +3,7 @@ use tree_sitter::{Node, TreeCursor};
 
 use crate::cli::Config;
 use crate::utils::fs::{read_input, write_output};
-use crate::utils::{get_headline_text, get_parser, get_stars};
+use crate::utils::{get_headline_text, get_parser, get_stars, is_done};
 use std::io;
 
 pub fn prune_done(
@@ -86,11 +86,7 @@ fn inner_prune_done(
     if node.kind() == "headline" {
         let stars = get_stars(node, content);
         if let Some(headline_text) = get_headline_text(node, content) {
-            if config
-                .keywords_finished
-                .iter()
-                .any(|keyword| headline_text.starts_with(keyword))
-            {
+            if is_done(config, &headline_text) {
                 info!("found finished {}", headline_text);
                 output.push_str(&content[*start_byte..node.start_byte()]);
                 *edited = true;

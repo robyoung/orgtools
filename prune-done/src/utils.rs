@@ -39,8 +39,15 @@ pub fn get_headline_text(node: Node, content: &str) -> Option<String> {
 }
 
 pub fn is_todo(config: &Config, headline_text: &str) -> bool {
-    let todo_keywords = &config.keywords_unfinished;
-    todo_keywords
+    config
+        .keywords_unfinished
+        .iter()
+        .any(|keyword| headline_text.starts_with(keyword))
+}
+
+pub fn is_done(config: &Config, headline_text: &str) -> bool {
+    config
+        .keywords_finished
         .iter()
         .any(|keyword| headline_text.starts_with(keyword))
 }
