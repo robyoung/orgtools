@@ -29,6 +29,11 @@ fn main() {
         } => {
             crate::commands::print_tree(&config, input_file.as_deref()).expect("print_tree failed");
         }
-        _ => unimplemented!(),
+        Commands::List {
+            input_file: InputFile { input_file },
+        } => {
+            crate::commands::list_headlines(&config, input_file.as_deref())
+                .expect("list_headlines failed");
+        }
     }
 }

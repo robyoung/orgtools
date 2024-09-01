@@ -1,14 +1,25 @@
 use std::io;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-use tree_sitter::{Node, Parser};
+use tree_sitter::{Language, Node, Parser};
+
+use crate::cli::Config;
 
 pub(crate) fn get_parser() -> Parser {
+    get_parser_and_language().0
+}
+
+pub(crate) fn get_parser_and_language() -> (Parser, Language) {
     let mut parser = Parser::new();
+    let language = get_language();
     parser
-        .set_language(tree_sitter_org::language())
+        .set_language(language)
         .expect("Error loading Org language");
-    parser
+    (parser, language)
+}
+
+pub(crate) fn get_language() -> tree_sitter::Language {
+    tree_sitter_org::language()
 }
 
 pub fn get_stars(node: Node, content: &str) -> String {
@@ -25,6 +36,13 @@ pub fn get_headline_text(node: Node, content: &str) -> Option<String> {
     } else {
         None
     }
+}
+
+pub fn is_todo(config: &Config, headline_text: &str) -> bool {
+    let todo_keywords = &config.keywords_unfinished;
+    todo_keywords
+        .iter()
+        .any(|keyword| headline_text.starts_with(keyword))
 }
 
 pub fn set_up_logging() {
