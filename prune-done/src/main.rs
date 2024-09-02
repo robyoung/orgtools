@@ -1,6 +1,7 @@
 // main.rs
 mod cli;
 mod commands;
+mod org;
 mod utils;
 
 use cli::Commands;
