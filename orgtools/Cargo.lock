@@ -149,6 +149,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
+name = "orgtools"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
+ "tree-sitter",
+ "tree-sitter-org",
+ "walkdir",
+]
+
+[[package]]
 name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -167,19 +180,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e719e8df665df0d1c8fbfd238015744736151d4445ec0836b8e628aae103b77"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "prune-done"
-version = "0.1.0"
-dependencies = [
- "clap",
- "tracing",
- "tracing-log",
- "tracing-subscriber",
- "tree-sitter",
- "tree-sitter-org",
- "walkdir",
 ]
 
 [[package]]
