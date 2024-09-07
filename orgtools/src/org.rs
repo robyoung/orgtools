@@ -25,6 +25,9 @@ impl<'a> Org<'a> {
             let tree_ref = tree.borrow();
             let root = tree_ref.root_node();
             let cursor = root.walk();
+            // Safety: Transmuting the lifetime of the tree and cursor to 'static is safe because
+            //          tree, root and cursor are all owned by the Org struct and will not outlive
+            //          it.
             unsafe {
                 (
                     std::mem::transmute::<Node, Node<'static>>(root),
@@ -39,6 +42,23 @@ impl<'a> Org<'a> {
             tree,
             root,
             cursor,
+        }
+    }
+    pub fn sections(&'a self) -> Sections<'a> {
+        Sections::new(self)
+    }
+}
+
+pub struct Sections<'a> {
+    org: &'a Org<'a>,
+    finished: bool,
+}
+
+impl<'a> Sections<'a> {
+    pub fn new(org: &'a Org<'a>) -> Self {
+        Sections {
+            org,
+            finished: false,
         }
     }
 }
