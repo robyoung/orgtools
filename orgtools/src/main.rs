@@ -24,8 +24,12 @@ fn main() {
             crate::commands::prune_done(&config, input_file.as_deref(), output_file.as_deref())
                 .expect("prune_done failed");
         }
-        Commands::Tree { input_file, sexp } => {
-            crate::commands::print_tree(&config, input_file.as_deref(), *sexp)
+        Commands::Tree {
+            input_file,
+            sexp,
+            sections,
+        } => {
+            crate::commands::print_tree(&config, input_file.as_deref(), *sexp, *sections)
                 .expect("print_tree failed");
         }
         Commands::List { input_file } => {

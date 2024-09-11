@@ -53,6 +53,12 @@ fn create_command() -> Command {
                         .long("sexp")
                         .action(ArgAction::SetTrue)
                         .help("Display tree in S-expression format"),
+                )
+                .arg(
+                    Arg::new("sections")
+                        .long("sections")
+                        .action(ArgAction::SetTrue)
+                        .help("Display sections"),
                 ),
         )
         .subcommand(
@@ -97,6 +103,7 @@ impl Cli {
             Some(("tree", sub_matches)) => Commands::Tree {
                 input_file: sub_matches.get_one::<String>("input_file").cloned(),
                 sexp: sub_matches.get_flag("sexp"),
+                sections: sub_matches.get_flag("sections"),
             },
             Some(("list", sub_matches)) => Commands::List {
                 input_file: sub_matches.get_one::<String>("input_file").cloned(),
@@ -121,6 +128,7 @@ pub enum Commands {
     Tree {
         input_file: Option<String>,
         sexp: bool,
+        sections: bool,
     },
     List {
         input_file: Option<String>,
