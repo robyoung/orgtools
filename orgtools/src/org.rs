@@ -2,7 +2,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use tree_sitter::{Node, Tree, TreeCursor};
+use tree_sitter::{Node, Tree};
 
 use crate::{cli::Config, utils::get_parser};
 
@@ -75,18 +75,17 @@ impl<'a> Section<'a> {
 
     pub fn keyword(&self) -> Keyword {
         if let Some(headline_text) = self.headline_text() {
-            if let Some(keyword) = self.find_keyword(&self.config.keywords_finished, &headline_text)
+            if let Some(keyword) = self.find_keyword(&self.config.keywords_finished, headline_text)
             {
                 return Keyword::Finished(keyword);
             }
 
             if let Some(keyword) =
-                self.find_keyword(&self.config.keywords_unfinished, &headline_text)
+                self.find_keyword(&self.config.keywords_unfinished, headline_text)
             {
                 return Keyword::Unfinished(keyword);
             }
         }
-        println!("No headline text found");
         Keyword::None
     }
 
@@ -95,6 +94,15 @@ impl<'a> Section<'a> {
             .iter()
             .find(|&keyword| headline_text.starts_with(keyword))
             .cloned()
+    }
+
+    pub fn stars(&self) -> usize {
+        let stars = self
+            .headline()
+            .expect("Error getting headline")
+            .child_by_field_name("stars")
+            .expect("Error getting stars");
+        stars.end_byte() - stars.start_byte()
     }
 }
 
@@ -114,123 +122,6 @@ pub enum Keyword {
     Finished(String),
     Unfinished(String),
     None,
-}
-
-pub struct Headlines<'a> {
-    config: &'a Config,
-    input: &'a str,
-    cursor: TreeCursor<'a>,
-    finished: bool,
-}
-
-impl<'a> Headlines<'a> {
-    pub fn new(config: &'a Config, input: &'a str, node: Node<'a>) -> Self {
-        Headlines {
-            config,
-            input,
-            cursor: node.walk(),
-            finished: false,
-        }
-    }
-
-    fn advance(&mut self) -> bool {
-        if self.cursor.goto_first_child() {
-            true
-        } else if self.cursor.goto_next_sibling() {
-            true
-        } else {
-            loop {
-                if !self.cursor.goto_parent() {
-                    if !self.cursor.goto_next_sibling() {
-                        return false;
-                    }
-                    break;
-                } else if self.cursor.goto_next_sibling() {
-                    break;
-                }
-            }
-            true
-        }
-    }
-
-    fn next_headline_node(&mut self) -> Option<Headline<'a>> {
-        while !self.finished {
-            let node = self.cursor.node();
-
-            if node.kind() == "headline" {
-                let headline = Headline {
-                    config: self.config,
-                    input: self.input,
-                    node,
-                };
-                self.advance();
-                return Some(headline);
-            } else if !self.advance() {
-                self.finished = true;
-            }
-        }
-        None
-    }
-}
-
-impl<'a> Iterator for Headlines<'a> {
-    type Item = Headline<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.next_headline_node()
-    }
-}
-
-pub struct Headline<'a> {
-    config: &'a Config,
-    input: &'a str,
-    node: Node<'a>,
-}
-
-impl<'a> Headline<'a> {
-    pub fn is_done(&self) -> bool {
-        if let Some(headline_text) = self.get_headline_text() {
-            is_done(self.config, &headline_text)
-        } else {
-            false
-        }
-    }
-
-    pub fn is_todo(&self) -> bool {
-        if let Some(headline_text) = self.get_headline_text() {
-            is_todo(self.config, &headline_text)
-        } else {
-            false
-        }
-    }
-
-    pub fn get_stars(&self) -> String {
-        self.node
-            .child_by_field_name("stars")
-            .expect("Error getting stars")
-            .utf8_text(self.input.as_bytes())
-            .expect("Error getting stars text")
-            .to_owned()
-    }
-
-    pub fn get_headline_text(&self) -> Option<String> {
-        if let Some(item) = self.node.child_by_field_name("item") {
-            Some(item.utf8_text(self.input.as_bytes()).ok()?.to_owned())
-        } else {
-            None
-        }
-    }
-
-    pub fn get_full_text(&self) -> String {
-        self.node
-            .utf8_text(self.input.as_bytes())
-            .unwrap()
-            .to_owned()
-    }
-
-    pub fn is_child_of(&self, other: &Headline) -> bool {
-        self.get_stars().len() > other.get_stars().len()
-    }
 }
 
 pub struct OutputBuilder<'a> {
@@ -254,14 +145,6 @@ impl<'a> OutputBuilder<'a> {
         self.start_byte = end_byte;
     }
 
-    /// Append input up to the start of this `Headline`.
-    ///
-    /// Append from the current position up to the start of this Headline.
-    /// Use this if you want to skip this `Headline`.
-    pub fn append_to_headline(&mut self, headline: &Headline) {
-        self.append_to(headline.node.start_byte())
-    }
-
     /// Append input up to the end of the input.
     ///
     /// Append from the current position up to the end of the input.
@@ -275,29 +158,6 @@ impl<'a> OutputBuilder<'a> {
     pub fn skip_to(&mut self, byte: usize) {
         self.start_byte = byte;
     }
-
-    /// Skip up to the start of this `Headline`.
-    ///
-    /// Advance the current position to the start of this `Headline`
-    /// without appending.
-    /// Use this if you want to include this `Headline`.
-    pub fn skip_to_headline(&mut self, headline: &Headline) {
-        self.skip_to(headline.node.start_byte());
-    }
-}
-
-fn is_todo(config: &Config, headline_text: &str) -> bool {
-    config
-        .keywords_unfinished
-        .iter()
-        .any(|keyword| headline_text.starts_with(keyword))
-}
-
-fn is_done(config: &Config, headline_text: &str) -> bool {
-    config
-        .keywords_finished
-        .iter()
-        .any(|keyword| headline_text.starts_with(keyword))
 }
 
 #[cfg(test)]
@@ -372,5 +232,19 @@ mod tests {
                 Keyword::None,
             ],
         );
+    }
+
+    #[test]
+    fn test_get_section_stars() {
+        // Given
+        let input = "* Headline 1\n** Headline 1.1\n* Headline 2\n";
+        let config = Config::default();
+
+        // When
+        let org = Org::new(&config, input);
+        let sections = org.sections();
+        assert_eq!(sections[0].stars(), 1);
+        let subsections = sections[0].subsections();
+        assert_eq!(subsections[0].stars(), 2);
     }
 }
