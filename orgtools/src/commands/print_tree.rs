@@ -67,7 +67,7 @@ fn print_sexp_tree(node: Node) {
 }
 
 fn print_sections(org: &Org) {
-    for section in org.sections() {
+    for section in org.subsections() {
         print_section(&section, 0);
     }
 }
@@ -76,7 +76,7 @@ fn print_section(section: &Section, indent: usize) {
     println!(
         "{:indent$}{} {} - {}  ::  ({} - {})",
         "",
-        section.headline_text().unwrap_or(""),
+        section.headline_text_full().unwrap_or(""),
         format_point(section.node().start_position()),
         format_point(section.node().end_position()),
         section.node().start_byte(),

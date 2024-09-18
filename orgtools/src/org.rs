@@ -9,6 +9,7 @@ use crate::{cli::Config, utils::get_parser};
 pub struct Org<'a> {
     config: &'a Config,
     input: &'a str,
+    #[allow(dead_code)]
     tree: Rc<RefCell<Tree>>,
     root: Node<'a>,
 }
@@ -36,7 +37,8 @@ impl<'a> Org<'a> {
             root,
         }
     }
-    pub fn sections(&'a self) -> Vec<Section<'a>> {
+
+    pub fn subsections(&'a self) -> Vec<Section<'a>> {
         get_subsections(self.config, self.input, self.root)
     }
 }
@@ -52,7 +54,7 @@ impl<'a> Section<'a> {
         self.node.child_by_field_name("headline")
     }
 
-    pub fn headline_text(&self) -> Option<&'a str> {
+    pub fn headline_text_full(&self) -> Option<&'a str> {
         let headline_text = self.headline()?.child_by_field_name("item")?;
         Some(headline_text.utf8_text(self.input.as_bytes()).unwrap())
     }
@@ -74,7 +76,7 @@ impl<'a> Section<'a> {
     }
 
     pub fn keyword(&self) -> Keyword {
-        if let Some(headline_text) = self.headline_text() {
+        if let Some(headline_text) = self.headline_text_full() {
             if let Some(keyword) = self.find_keyword(&self.config.keywords_finished, headline_text)
             {
                 return Keyword::Finished(keyword);
@@ -177,9 +179,9 @@ mod tests {
         // When
         let org = Org::new(&config, input);
         let headlines = org
-            .sections()
+            .subsections()
             .into_iter()
-            .filter_map(|section| section.headline_text())
+            .filter_map(|section| section.headline_text_full())
             .collect::<Vec<_>>();
         assert_eq!(
             headlines,
@@ -200,9 +202,9 @@ mod tests {
         // When
         let org = Org::new(&config, input);
         let headlines = org
-            .sections()
+            .subsections()
             .into_iter()
-            .filter_map(|section| section.headline_text())
+            .filter_map(|section| section.headline_text_full())
             .collect::<Vec<_>>();
         assert_eq!(headlines, vec![String::from("Hedline 1")]);
     }
@@ -218,7 +220,7 @@ mod tests {
 
         // When
         let org = Org::new(&config, input);
-        let sections = org.sections();
+        let sections = org.subsections();
         let keywords = sections
             .iter()
             .map(|section| section.keyword())
