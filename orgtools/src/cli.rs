@@ -1,4 +1,4 @@
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
 
 fn parse_keyword(s: &str) -> Result<String, String> {
     Ok(s.trim().to_uppercase())
@@ -12,8 +12,12 @@ pub fn cli() -> Cli {
 fn create_command() -> Command {
     let input_file = Arg::new("input_file")
         .help("Input file path")
-        .required(false)
-        .index(1);
+        .required(false);
+    let output_file = Arg::new("output_file")
+        .long("output-file")
+        .help("Output file path")
+        .required(false);
+
     Command::new("orgtools")
         .about("A tool for managing org files")
         .subcommand_required(true)
@@ -37,12 +41,7 @@ fn create_command() -> Command {
             Command::new("prune")
                 .about("Remove finished tasks")
                 .arg(input_file.clone())
-                .arg(
-                    Arg::new("output_file")
-                        .long("output-file")
-                        .help("Output file path")
-                        .required(false),
-                ),
+                .arg(output_file.clone()),
         )
         .subcommand(
             Command::new("tree")
@@ -65,6 +64,28 @@ fn create_command() -> Command {
             Command::new("list")
                 .about("List tasks")
                 .arg(input_file.clone()),
+        )
+        .subcommand(
+            Command::new("add")
+                .about("Add a task")
+                .arg(input_file.clone())
+                .arg(output_file.clone())
+                .arg(
+                    Arg::new("under")
+                        .long("under")
+                        .help("Headline under which to add the task"),
+                )
+                .arg(
+                    Arg::new("after")
+                        .long("after")
+                        .help("Headline after which to add the task"),
+                )
+                .group(
+                    ArgGroup::new("under_or_after")
+                        .args(["under", "after"])
+                        .required(false)
+                        .multiple(false),
+                ),
         )
 }
 
@@ -108,6 +129,13 @@ impl Cli {
             Some(("list", sub_matches)) => Commands::List {
                 input_file: sub_matches.get_one::<String>("input_file").cloned(),
             },
+            Some(("add", sub_matches)) => Commands::Add {
+                input_file: sub_matches.get_one::<String>("input_file").cloned(),
+                output_file: sub_matches.get_one::<String>("output_file").cloned(),
+                headline: sub_matches.get_one::<String>("headline").unwrap().clone(),
+                under: sub_matches.get_one::<String>("under").cloned(),
+                after: sub_matches.get_one::<String>("after").cloned(),
+            },
             _ => unreachable!(),
         };
 
@@ -132,6 +160,13 @@ pub enum Commands {
     },
     List {
         input_file: Option<String>,
+    },
+    Add {
+        input_file: Option<String>,
+        output_file: Option<String>,
+        headline: String,
+        under: Option<String>,
+        after: Option<String>,
     },
 }
 

@@ -14,6 +14,7 @@ pub struct Org<'a> {
     root: Node<'a>,
 }
 
+/// The main interface for interacting with Org mode files
 impl<'a> Org<'a> {
     pub fn new(config: &'a Config, input: &'a str) -> Self {
         let mut parser = get_parser();
@@ -41,6 +42,10 @@ impl<'a> Org<'a> {
     pub fn subsections(&'a self) -> Vec<Section<'a>> {
         get_subsections(self.config, self.input, self.root)
     }
+
+    pub fn find_section(&'a self, search: &str) -> Option<Section<'a>> {
+        find_section(self.config, self.input, self.root, search)
+    }
 }
 
 pub struct Section<'a> {
@@ -54,9 +59,25 @@ impl<'a> Section<'a> {
         self.node.child_by_field_name("headline")
     }
 
+    /// Returns the full headline text including the keyword.
+    ///
+    /// Does not include the stars.
     pub fn headline_text_full(&self) -> Option<&'a str> {
         let headline_text = self.headline()?.child_by_field_name("item")?;
         Some(headline_text.utf8_text(self.input.as_bytes()).unwrap())
+    }
+
+    /// Returns the headline text without any keyword.
+    pub fn headline_text(&self) -> Option<&'a str> {
+        let headline = match self.keyword() {
+            Keyword::Finished(keyword) | Keyword::Unfinished(keyword) => {
+                let keyword_len = keyword.len();
+                self.headline_text_full()
+                    .map(|text| text[keyword_len..].trim())
+            }
+            Keyword::None => self.headline_text_full(),
+        };
+        headline.map(|text| text.trim())
     }
 
     pub fn subsections(&self) -> Vec<Section<'a>> {
@@ -119,11 +140,35 @@ fn get_subsections<'a>(config: &'a Config, input: &'a str, node: Node<'a>) -> Ve
         .collect()
 }
 
+fn find_section<'a>(
+    config: &'a Config,
+    input: &'a str,
+    node: Node<'a>,
+    search: &str,
+) -> Option<Section<'a>> {
+    for section in get_subsections(config, input, node) {
+        let headline_text = section.headline_text()?;
+        if headline_text.eq(search) {
+            return Some(section);
+        }
+        if let Some(subsection) = find_section(config, input, section.node, search) {
+            return Some(subsection);
+        }
+    }
+    None
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Keyword {
     Finished(String),
     Unfinished(String),
     None,
+}
+
+#[derive(Debug)]
+pub enum Position {
+    Under,
+    After,
 }
 
 pub struct OutputBuilder<'a> {
@@ -159,6 +204,10 @@ impl<'a> OutputBuilder<'a> {
 
     pub fn skip_to(&mut self, byte: usize) {
         self.start_byte = byte;
+    }
+
+    pub fn insert_text(&mut self, text: &str) {
+        self.output.push_str(text);
     }
 }
 
@@ -244,9 +293,23 @@ mod tests {
 
         // When
         let org = Org::new(&config, input);
-        let sections = org.sections();
+        let sections = org.subsections();
         assert_eq!(sections[0].stars(), 1);
         let subsections = sections[0].subsections();
         assert_eq!(subsections[0].stars(), 2);
+    }
+
+    #[test]
+    fn test_find_section() {
+        // Given
+        let input = "* Headline 1\n** Headline 1.1\n* Headline 2\n";
+        let config = Config::default();
+
+        // When
+        let org = Org::new(&config, input);
+        let section = org.find_section("Headline 1").unwrap();
+
+        // Then
+        assert_eq!(section.headline_text_full().unwrap(), "Headline 1");
     }
 }

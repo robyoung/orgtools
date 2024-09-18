@@ -5,6 +5,7 @@ mod org;
 mod utils;
 
 use cli::Commands;
+use org::Position;
 use tracing::debug;
 use utils::set_up_logging;
 
@@ -35,6 +36,30 @@ fn main() {
         Commands::List { input_file } => {
             crate::commands::list_headlines(&config, input_file.as_deref())
                 .expect("list_headlines failed");
+        }
+        Commands::Add {
+            input_file,
+            output_file,
+            headline,
+            under,
+            after,
+        } => {
+            let (position, search) = if let Some(under) = under {
+                (Position::Under, under)
+            } else if let Some(after) = after {
+                (Position::After, after)
+            } else {
+                panic!("Either under or after must be provided")
+            };
+            crate::commands::add_headline(
+                &config,
+                input_file.as_deref(),
+                output_file.as_deref(),
+                headline,
+                position,
+                search,
+            )
+            .expect("add_headline failed");
         }
     }
 }
