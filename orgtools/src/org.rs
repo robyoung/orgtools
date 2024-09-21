@@ -1,8 +1,47 @@
 //! API for interacting with Org mode files
 
-use tree_sitter::{Node, TreeCursor};
+use std::{cell::RefCell, rc::Rc};
 
-use crate::cli::Config;
+use tree_sitter::{Node, Tree, TreeCursor};
+
+use crate::{cli::Config, utils::get_parser};
+
+pub struct Org<'a> {
+    config: &'a Config,
+    input: &'a str,
+    tree: Rc<RefCell<Tree>>,
+    root: Node<'a>,
+    cursor: TreeCursor<'a>,
+}
+
+impl<'a> Org<'a> {
+    pub fn new(config: &'a Config, input: &'a str) -> Self {
+        let mut parser = get_parser();
+        let tree = Rc::new(RefCell::new(
+            parser.parse(input, None).expect("Error parsing Org file."),
+        ));
+
+        let (root, cursor) = {
+            let tree_ref = tree.borrow();
+            let root = tree_ref.root_node();
+            let cursor = root.walk();
+            unsafe {
+                (
+                    std::mem::transmute::<Node, Node<'static>>(root),
+                    std::mem::transmute::<TreeCursor, TreeCursor<'static>>(cursor),
+                )
+            }
+        };
+
+        Org {
+            config,
+            input,
+            tree,
+            root,
+            cursor,
+        }
+    }
+}
 
 pub struct Headlines<'a> {
     config: &'a Config,

@@ -82,4 +82,5 @@ mod tests {
         let result = prune_done_inner(&config, input);
         assert_eq!(result, expected_output);
     }
+    // TODO: Add tests that include properties, drawers, file preamble and body text.
 }

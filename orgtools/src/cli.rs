@@ -1,4 +1,4 @@
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 
 fn parse_keyword(s: &str) -> Result<String, String> {
     Ok(s.trim().to_uppercase())
@@ -47,7 +47,13 @@ fn create_command() -> Command {
         .subcommand(
             Command::new("tree")
                 .about("Display tree structure")
-                .arg(input_file.clone()),
+                .arg(input_file.clone())
+                .arg(
+                    Arg::new("sexp")
+                        .long("sexp")
+                        .action(ArgAction::SetTrue)
+                        .help("Display tree in S-expression format"),
+                ),
         )
         .subcommand(
             Command::new("list")
@@ -90,6 +96,7 @@ impl Cli {
             },
             Some(("tree", sub_matches)) => Commands::Tree {
                 input_file: sub_matches.get_one::<String>("input_file").cloned(),
+                sexp: sub_matches.get_flag("sexp"),
             },
             Some(("list", sub_matches)) => Commands::List {
                 input_file: sub_matches.get_one::<String>("input_file").cloned(),
@@ -113,6 +120,7 @@ pub enum Commands {
     },
     Tree {
         input_file: Option<String>,
+        sexp: bool,
     },
     List {
         input_file: Option<String>,
