@@ -1,2 +1,4 @@
-/venv
+/pytools/venv
 target/
+/*.org
+/TODO.md

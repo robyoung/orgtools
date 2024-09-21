@@ -1,3 +1,0 @@
-[workspace]
-members = ["orgtools-lib", "orgtools-cli"]
-resolver = "2"

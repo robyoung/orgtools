@@ -1,0 +1,3 @@
+[workspace]
+members = ["orgtools-lib", "orgtools-cli", "orgsync"]
+resolver = "2"
