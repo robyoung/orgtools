@@ -1,6 +1,6 @@
 //! Remove completed tasks from an org file.
 
-use crate::cli::Config;
+use crate::config::Config;
 use crate::org::{Keyword, Org, OutputBuilder, Section};
 use crate::utils::fs::{read_input, write_output};
 use std::io;

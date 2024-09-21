@@ -1,5 +1,5 @@
+use crate::config::Config;
 use crate::{
-    cli::Config,
     org::{Org, OutputBuilder, Position, Section},
     utils::fs::{read_input, write_output},
 };

@@ -1,3 +1,4 @@
+use crate::config::Config;
 use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
 
 fn parse_keyword(s: &str) -> Result<String, String> {
@@ -168,23 +169,4 @@ pub enum Commands {
         under: Option<String>,
         after: Option<String>,
     },
-}
-
-#[derive(Debug, Clone)]
-pub struct Config {
-    pub keywords_unfinished: Vec<String>,
-    pub keywords_finished: Vec<String>,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            keywords_unfinished: vec![
-                "TODO".to_string(),
-                "DOING".to_string(),
-                "BLOCKED".to_string(),
-            ],
-            keywords_finished: vec!["DONE".to_string(), "ABANDONED".to_string()],
-        }
-    }
 }

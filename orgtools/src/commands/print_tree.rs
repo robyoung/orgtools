@@ -2,8 +2,8 @@ use std::io;
 
 use tree_sitter::{Node, Point};
 
+use crate::config::Config;
 use crate::{
-    cli::Config,
     org::{Org, OrgFile, Section},
     utils::{fs::read_input, get_parser},
 };

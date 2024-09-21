@@ -1,7 +1,7 @@
 use std::io;
 
+use crate::config::Config;
 use crate::{
-    cli::Config,
     org::{Keyword, Org, Section},
     utils::fs::read_input,
 };

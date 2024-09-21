@@ -4,7 +4,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use tree_sitter::{Node, Tree};
 
-use crate::{cli::Config, utils::get_parser};
+use crate::config::Config;
+use crate::utils::get_parser;
 
 pub struct Org {
     config: Config,
