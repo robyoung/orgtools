@@ -1,10 +1,8 @@
 use std::io;
 
-use crate::config::Config;
-use crate::{
-    org::{Keyword, Org, Section},
-    utils::fs::read_input,
-};
+use crate::utils::fs::read_input;
+use orgtools::config::Config;
+use orgtools::org::{Keyword, Org, Section};
 
 pub fn list_headlines(config: &Config, input_file: Option<&str>) -> io::Result<()> {
     let input = read_input(input_file)?;

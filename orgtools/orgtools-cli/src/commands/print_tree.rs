@@ -1,12 +1,9 @@
 use std::io;
 
-use tree_sitter::{Node, Point};
-
-use crate::config::Config;
-use crate::{
-    org::{Org, OrgFile, Section},
-    utils::{fs::read_input, get_parser},
-};
+use crate::utils::fs::read_input;
+use orgtools::config::Config;
+use orgtools::org::{Org, OrgFile, Section};
+use orgtools::tree_sitter::{Node, Point};
 
 pub fn print_tree(
     config: &Config,
@@ -15,15 +12,13 @@ pub fn print_tree(
     sections: bool,
 ) -> io::Result<()> {
     let input = read_input(input_file)?;
-    let mut parser = get_parser();
-    let tree = parser.parse(&input, None).unwrap();
+    let org = Org::from_config(config.clone()).load(&input);
     if sexp {
-        print_sexp_tree(tree.root_node());
+        print_sexp_tree(org.root);
     } else if sections {
-        let org = Org::from_config(config.clone()).load(&input);
         print_sections(&org);
     } else {
-        print_manual_tree(tree.root_node(), &input, 0);
+        print_manual_tree(org.root, &input, 0);
     }
 
     Ok(())

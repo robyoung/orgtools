@@ -1,11 +1,14 @@
 // main.rs
+mod cli;
+mod commands;
+mod utils;
 
-use orgtools::cli::Commands;
+use crate::cli::Commands;
+use crate::utils::set_up_logging;
 use orgtools::org::Position;
-use orgtools::utils::set_up_logging;
 use tracing::debug;
 
-use orgtools::cli::cli;
+use crate::cli::cli;
 
 fn main() {
     set_up_logging();
@@ -18,7 +21,7 @@ fn main() {
             output_file,
             input_file,
         } => {
-            orgtools::commands::prune_done(&config, input_file.as_deref(), output_file.as_deref())
+            commands::prune_done(&config, input_file.as_deref(), output_file.as_deref())
                 .expect("prune_done failed");
         }
         Commands::Tree {
@@ -26,11 +29,11 @@ fn main() {
             sexp,
             sections,
         } => {
-            orgtools::commands::print_tree(&config, input_file.as_deref(), *sexp, *sections)
+            commands::print_tree(&config, input_file.as_deref(), *sexp, *sections)
                 .expect("print_tree failed");
         }
         Commands::List { input_file } => {
-            orgtools::commands::list_headlines(&config, input_file.as_deref())
+            commands::list_headlines(&config, input_file.as_deref())
                 .expect("list_headlines failed");
         }
         Commands::Add {
@@ -47,7 +50,7 @@ fn main() {
             } else {
                 panic!("Either under or after must be provided")
             };
-            orgtools::commands::add_headline(
+            commands::add_headline(
                 &config,
                 input_file.as_deref(),
                 output_file.as_deref(),

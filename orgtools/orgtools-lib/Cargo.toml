@@ -1,0 +1,12 @@
+[package]
+name = "orgtools"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tree-sitter-org = { git = "https://github.com/nvim-orgmode/tree-sitter-org.git" }
+tree-sitter = "0.20"
+tracing = "0.1.40"
+tracing-log = "0.2.0"
+anyhow = "1.0.88"
+chrono = "0.4.38"

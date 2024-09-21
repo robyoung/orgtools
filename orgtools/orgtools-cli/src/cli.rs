@@ -1,5 +1,5 @@
-use crate::config::Config;
 use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
+use orgtools::config::Config;
 
 fn parse_keyword(s: &str) -> Result<String, String> {
     Ok(s.trim().to_uppercase())

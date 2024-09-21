@@ -1,10 +1,8 @@
-use crate::config::Config;
-use crate::{
-    org::{Org, OutputBuilder, Position, Section},
-    utils::fs::{read_input, write_output},
-};
+use crate::utils::fs::{read_input, write_output};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
+use orgtools::config::Config;
+use orgtools::org::{Org, OutputBuilder, Position, Section};
 
 pub fn add_headline(
     config: &Config,

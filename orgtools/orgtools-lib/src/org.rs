@@ -41,7 +41,7 @@ pub struct OrgFile<'a> {
     input: &'a str,
     #[allow(dead_code)]
     tree: Rc<RefCell<Tree>>,
-    root: Node<'a>,
+    pub root: Node<'a>,
 }
 
 /// The main interface for interacting with Org mode files
