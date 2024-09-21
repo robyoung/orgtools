@@ -19,21 +19,21 @@ pub fn prune_done(
 }
 
 fn prune_done_from_input(config: &Config, input: &str) -> String {
-    let org = Org::new(config, input);
-    let mut builder = OutputBuilder::new(input);
+    let org = Org::from_config(config.clone()).load(input);
+    let mut output = org.output_builder();
     for section in org.subsections() {
-        prune_done_from_section(&section, &mut builder);
+        prune_done_from_section(&section, &mut output);
     }
-    builder.append_to_end()
+    output.append_to_end()
 }
 
-fn prune_done_from_section(section: &Section, builder: &mut OutputBuilder) {
+fn prune_done_from_section(section: &Section, output: &mut OutputBuilder) {
     if let Keyword::Finished(_) = section.keyword() {
-        builder.append_to(section.start_byte());
-        builder.skip_to(section.end_byte());
+        output.append_to(section.start_byte());
+        output.skip_to(section.end_byte());
     } else {
         for subsection in section.subsections() {
-            prune_done_from_section(&subsection, builder);
+            prune_done_from_section(&subsection, output);
         }
     }
 }

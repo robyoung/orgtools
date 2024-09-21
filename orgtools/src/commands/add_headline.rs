@@ -1,5 +1,3 @@
-use std::io;
-
 use crate::{
     cli::Config,
     org::{Org, OutputBuilder, Position, Section},
@@ -31,11 +29,11 @@ fn add_headline_to_input(
     position: Position,
     search: &str,
 ) -> Result<String> {
-    let org = Org::new(config, input);
-    let mut builder = OutputBuilder::new(input);
-    if let Some(section) = org.find_section(search) {
-        add_headline_to_section(&section, &mut builder, headline, position)?;
-        Ok(builder.append_to_end())
+    let org_file = Org::from_config(config.clone()).load(input);
+    let mut output = org_file.output_builder();
+    if let Some(section) = org_file.find_section(search) {
+        add_headline_to_section(&section, &mut output, headline, position)?;
+        Ok(output.append_to_end())
     } else {
         Err(anyhow!("Could not find section with headline: {}", search))
     }
@@ -43,11 +41,11 @@ fn add_headline_to_input(
 
 fn add_headline_to_section(
     section: &Section,
-    builder: &mut OutputBuilder,
+    output: &mut OutputBuilder,
     headline: &str,
     position: Position,
 ) -> Result<()> {
-    builder.append_to(section.end_byte());
+    output.append_to(section.end_byte());
     let num_stars = match position {
         Position::After => section.stars(),
         Position::Under => section.stars() + 1,
@@ -56,7 +54,7 @@ fn add_headline_to_section(
     // :PROPERTIES:
     // :CREATED: [2021-08-15 Sun 14:00]
     // :END:
-    builder.insert_text(&make_headline(num_stars, headline));
+    output.insert_text(&make_headline(num_stars, headline));
     Ok(())
 }
 

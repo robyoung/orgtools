@@ -6,8 +6,37 @@ use tree_sitter::{Node, Tree};
 
 use crate::{cli::Config, utils::get_parser};
 
-pub struct Org<'a> {
-    config: &'a Config,
+pub struct Org {
+    config: Config,
+}
+
+impl Org {
+    pub fn new() -> Self {
+        Self {
+            config: Config::default(),
+        }
+    }
+
+    pub fn from_config(config: Config) -> Self {
+        Self { config }
+    }
+
+    pub fn keywords_unfinished(mut self, keywords: &[&str]) -> Self {
+        self.config.keywords_unfinished = keywords.iter().map(|s| s.to_string()).collect();
+        self
+    }
+    pub fn keywords_finished(mut self, keywords: &[&str]) -> Self {
+        self.config.keywords_finished = keywords.iter().map(|s| s.to_string()).collect();
+        self
+    }
+
+    pub fn load<'a>(&self, input: &'a str) -> OrgFile<'a> {
+        OrgFile::new(self.config.clone(), input)
+    }
+}
+
+pub struct OrgFile<'a> {
+    config: Config,
     input: &'a str,
     #[allow(dead_code)]
     tree: Rc<RefCell<Tree>>,
@@ -15,8 +44,8 @@ pub struct Org<'a> {
 }
 
 /// The main interface for interacting with Org mode files
-impl<'a> Org<'a> {
-    pub fn new(config: &'a Config, input: &'a str) -> Self {
+impl<'a> OrgFile<'a> {
+    pub fn new(config: Config, input: &'a str) -> Self {
         let mut parser = get_parser();
         let tree = Rc::new(RefCell::new(
             parser.parse(input, None).expect("Error parsing Org file."),
@@ -31,7 +60,7 @@ impl<'a> Org<'a> {
             unsafe { std::mem::transmute::<Node, Node<'static>>(root) }
         };
 
-        Org {
+        Self {
             config,
             input,
             tree,
@@ -40,11 +69,15 @@ impl<'a> Org<'a> {
     }
 
     pub fn subsections(&'a self) -> Vec<Section<'a>> {
-        get_subsections(self.config, self.input, self.root)
+        get_subsections(&self.config, self.input, self.root)
     }
 
     pub fn find_section(&'a self, search: &str) -> Option<Section<'a>> {
-        find_section(self.config, self.input, self.root, search)
+        find_section(&self.config, self.input, self.root, search)
+    }
+
+    pub fn output_builder(&self) -> OutputBuilder {
+        OutputBuilder::new(self.input)
     }
 }
 
@@ -223,10 +256,9 @@ mod tests {
 * Hedline 2
 "#
         .trim();
-        let config = Config::default();
 
         // When
-        let org = Org::new(&config, input);
+        let org = Org::new().load(input);
         let headlines = org
             .subsections()
             .into_iter()
@@ -246,10 +278,9 @@ mod tests {
 ** Hedline 1.1
 "#
         .trim();
-        let config = Config::default();
 
         // When
-        let org = Org::new(&config, input);
+        let org = Org::new().load(input);
         let headlines = org
             .subsections()
             .into_iter()
@@ -262,13 +293,12 @@ mod tests {
     fn test_get_section_headline_keyword() {
         // Given
         let input = "* DONE Headline 1\n* TODO Headline 2\n* Headline 3\n* \n";
-        let config = Config {
-            keywords_finished: vec![String::from("DONE")],
-            keywords_unfinished: vec![String::from("TODO")],
-        };
 
         // When
-        let org = Org::new(&config, input);
+        let org = Org::new()
+            .keywords_finished(&["DONE"])
+            .keywords_unfinished(&["TODO"])
+            .load(input);
         let sections = org.subsections();
         let keywords = sections
             .iter()
@@ -289,10 +319,9 @@ mod tests {
     fn test_get_section_stars() {
         // Given
         let input = "* Headline 1\n** Headline 1.1\n* Headline 2\n";
-        let config = Config::default();
 
         // When
-        let org = Org::new(&config, input);
+        let org = Org::new().load(input);
         let sections = org.subsections();
         assert_eq!(sections[0].stars(), 1);
         let subsections = sections[0].subsections();
@@ -303,10 +332,9 @@ mod tests {
     fn test_find_section() {
         // Given
         let input = "* Headline 1\n** Headline 1.1\n* Headline 2\n";
-        let config = Config::default();
 
         // When
-        let org = Org::new(&config, input);
+        let org = Org::new().load(input);
         let section = org.find_section("Headline 1").unwrap();
 
         // Then

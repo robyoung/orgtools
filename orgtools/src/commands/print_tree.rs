@@ -4,7 +4,7 @@ use tree_sitter::{Node, Point};
 
 use crate::{
     cli::Config,
-    org::{Org, Section},
+    org::{Org, OrgFile, Section},
     utils::{fs::read_input, get_parser},
 };
 
@@ -20,7 +20,7 @@ pub fn print_tree(
     if sexp {
         print_sexp_tree(tree.root_node());
     } else if sections {
-        let org = Org::new(config, &input);
+        let org = Org::from_config(config.clone()).load(&input);
         print_sections(&org);
     } else {
         print_manual_tree(tree.root_node(), &input, 0);
@@ -66,7 +66,7 @@ fn print_sexp_tree(node: Node) {
     println!("{}", result);
 }
 
-fn print_sections(org: &Org) {
+fn print_sections(org: &OrgFile) {
     for section in org.subsections() {
         print_section(&section, 0);
     }
