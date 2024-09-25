@@ -114,7 +114,7 @@ async fn submit_entry(
         let section = output_builder
             .new_section()
             .headline(&date)
-            .body(&entry.content)
+            .body(&entry.content.trim())
             .render();
 
         let mut output = output_builder.append_to_end_of_input();

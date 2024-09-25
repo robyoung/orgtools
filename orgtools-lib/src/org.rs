@@ -305,7 +305,8 @@ impl<'a> SectionBuilder<'a> {
         );
 
         if let Some(body) = self.body.as_ref() {
-            text.push_str(body);
+            text.push_str(body.trim());
+            text.push('\n');
         }
         text
     }
