@@ -226,12 +226,20 @@ impl<'a> OutputBuilder<'a> {
         self.start_byte = end_byte;
     }
 
+    pub fn append_up_to_section(&mut self, section: &Section) {
+        self.append_to(section.start_byte());
+    }
+
+    pub fn append_to_end_of_section(&mut self, section: &Section) {
+        self.append_to(section.end_byte());
+    }
+
     /// Append input up to the end of the input.
     ///
     /// Append from the current position up to the end of the input.
     /// This consumes the `OutputBuilder` there is no more input to
     /// append.
-    pub fn append_to_end(mut self) -> String {
+    pub fn append_to_end_of_input(mut self) -> String {
         self.output.push_str(&self.input[self.start_byte..]);
         self.output
     }

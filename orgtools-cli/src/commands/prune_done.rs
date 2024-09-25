@@ -24,7 +24,7 @@ fn prune_done_from_input(config: &Config, input: &str) -> String {
     for section in org.subsections() {
         prune_done_from_section(&section, &mut output);
     }
-    output.append_to_end()
+    output.append_to_end_of_input()
 }
 
 fn prune_done_from_section(section: &Section, output: &mut OutputBuilder) {

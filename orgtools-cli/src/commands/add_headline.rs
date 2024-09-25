@@ -31,7 +31,7 @@ fn add_headline_to_input(
     let mut output = org_file.output_builder();
     if let Some(section) = org_file.find_section(search) {
         add_headline_to_section(&section, &mut output, headline, position)?;
-        Ok(output.append_to_end())
+        Ok(output.append_to_end_of_input())
     } else {
         Err(anyhow!("Could not find section with headline: {}", search))
     }
@@ -43,7 +43,7 @@ fn add_headline_to_section(
     headline: &str,
     position: Position,
 ) -> Result<()> {
-    output.append_to(section.end_byte());
+    output.append_to_end_of_section(section);
     let num_stars = match position {
         Position::After => section.stars(),
         Position::Under => section.stars() + 1,
