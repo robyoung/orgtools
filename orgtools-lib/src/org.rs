@@ -78,7 +78,7 @@ impl<'a> OrgFile<'a> {
     }
 
     pub fn output_builder(&self) -> OutputBuilder {
-        OutputBuilder::new(self.input)
+        OutputBuilder::new(&self.config, self.input)
     }
 }
 
@@ -112,6 +112,14 @@ impl<'a> Section<'a> {
             Keyword::None => self.headline_text_full(),
         };
         headline.map(|text| text.trim())
+    }
+
+    pub fn body(&self) -> Option<Node<'a>> {
+        self.node.child_by_field_name("body")
+    }
+
+    pub fn body_text(&self) -> Option<&'a str> {
+        Some(self.body()?.utf8_text(self.input.as_bytes()).unwrap())
     }
 
     pub fn subsections(&self) -> Vec<Section<'a>> {
@@ -206,14 +214,16 @@ pub enum Position {
 }
 
 pub struct OutputBuilder<'a> {
+    config: &'a Config,
     input: &'a str,
     output: String,
     start_byte: usize,
 }
 
 impl<'a> OutputBuilder<'a> {
-    pub fn new(input: &'a str) -> Self {
+    pub fn new(config: &'a Config, input: &'a str) -> Self {
         Self {
+            config,
             input,
             output: String::new(),
             start_byte: 0,
@@ -250,6 +260,79 @@ impl<'a> OutputBuilder<'a> {
 
     pub fn insert_text(&mut self, text: &str) {
         self.output.push_str(text);
+    }
+
+    pub fn new_section(&mut self) -> SectionBuilder {
+        SectionBuilder::new(self.config)
+    }
+
+    pub fn insert_section(&mut self, section: SectionBuilder) {
+        self.output.push_str(&section.render());
+    }
+}
+
+pub struct SectionBuilder<'a> {
+    config: &'a Config,
+    stars: usize,
+    headline: String,
+    keyword: Option<String>,
+    body: Option<String>,
+}
+
+impl<'a> SectionBuilder<'a> {
+    fn new(config: &'a Config) -> Self {
+        Self {
+            config,
+            stars: 1,
+            headline: String::new(),
+            keyword: None,
+            body: None,
+        }
+    }
+
+    pub fn render(&self) -> String {
+        let stars = "*".repeat(self.stars);
+        let keyword = self
+            .keyword
+            .as_ref()
+            .map(|keyword| format!(" {}", keyword))
+            .unwrap_or_default();
+        let headline: &str = self.headline.as_ref();
+        let mut text = format!(
+            r#"
+{stars}{keyword} {headline}
+"#
+        );
+
+        if let Some(body) = self.body.as_ref() {
+            text.push_str(body);
+        }
+        text
+    }
+
+    pub fn stars(mut self, stars: usize) -> Self {
+        self.stars = stars;
+        self
+    }
+
+    pub fn keyword(mut self, keyword: &str) -> Self {
+        let keyword = keyword.to_uppercase();
+        if self.config.keywords_finished.contains(&keyword)
+            || self.config.keywords_unfinished.contains(&keyword)
+        {
+            self.keyword = Some(keyword);
+        }
+        self
+    }
+
+    pub fn headline(mut self, headline: &str) -> Self {
+        self.headline = headline.to_string();
+        self
+    }
+
+    pub fn body(mut self, body: &str) -> Self {
+        self.body = Some(body.to_string());
+        self
     }
 }
 
